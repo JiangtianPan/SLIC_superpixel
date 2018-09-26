@@ -50,6 +50,8 @@ class SLICProcessor(object):
         io.imsave(path, rgb_arr)
 
     def make_cluster(self, h, w):
+        #print (h, w)
+        #print (self.data[h][w][0])
         return Cluster(h, w,
                        self.data[h][w][0],
                        self.data[h][w][1],
@@ -70,37 +72,46 @@ class SLICProcessor(object):
         self.dis = np.full((self.image_height, self.image_width), np.inf)
 
     def init_clusters(self):
-        h = self.S / 2
-        w = self.S / 2
+        h = int(self.S / 2)
+        w = int(self.S / 2)
+        
         while h < self.image_height:
             while w < self.image_width:
-                self.clusters.append(self.make_cluster(h, w))
-                w += self.S
-            w = self.S / 2
+                #print(h, w)
+                if h < self.image_height and w < self.image_width:
+                    self.clusters.append(self.make_cluster(h, w))
+                    w += self.S
+            ###modified    
+            w = int(self.S / 2)
             h += self.S
-
+        #print(self.clusters)
+            
     def get_gradient(self, h, w):
+        #print ("h-before: ", h, "w-before: ", w)
         if w + 1 >= self.image_width:
             w = self.image_width - 2
         if h + 1 >= self.image_height:
             h = self.image_height - 2
 
-        gradient = self.data[w + 1][h + 1][0] - self.data[w][h][0] + \
-                   self.data[w + 1][h + 1][1] - self.data[w][h][1] + \
-                   self.data[w + 1][h + 1][2] - self.data[w][h][2]
+        #print ("h: ", h, "w: ", w, "width: ", self.image_width, "height: ", self.image_height)
+        gradient = self.data[h+1][w+1][0] - self.data[h][w][0] + \
+                   self.data[h+1][w+1][1] - self.data[h][w][1] + \
+                   self.data[h+1][w+1][2] - self.data[h][w][2]
         return gradient
 
     def move_clusters(self):
         for cluster in self.clusters:
-            cluster_gradient = self.get_gradient(cluster.h, cluster.w)
-            for dh in range(-1, 2):
-                for dw in range(-1, 2):
-                    _h = cluster.h + dh
-                    _w = cluster.w + dw
-                    new_gradient = self.get_gradient(_h, _w)
-                    if new_gradient < cluster_gradient:
-                        cluster.update(_h, _w, self.data[_h][_w][0], self.data[_h][_w][1], self.data[_h][_w][2])
-                        cluster_gradient = new_gradient
+            #print(cluster)
+            if cluster.h < (self.image_height-1) and cluster.w < (self.image_width-1):
+                cluster_gradient = self.get_gradient(cluster.h, cluster.w)
+                for dh in range(-1, 2):
+                    for dw in range(-1, 2):
+                        _h = cluster.h + dh
+                        _w = cluster.w + dw
+                        new_gradient = self.get_gradient(_h, _w)
+                        if new_gradient < cluster_gradient:
+                            cluster.update(_h, _w, self.data[_h][_w][0], self.data[_h][_w][1], self.data[_h][_w][2])
+                            cluster_gradient = new_gradient
 
     def assignment(self):
         for cluster in self.clusters:
@@ -134,8 +145,10 @@ class SLICProcessor(object):
                 sum_h += p[0]
                 sum_w += p[1]
                 number += 1
-                _h = sum_h / number
-                _w = sum_w / number
+                _h = int(sum_h / number)
+                _w = int(sum_w / number)
+                print(_h, _w)
+                #print(self.data[_h][_w][0], self.data[_h][_w][1], self.data[_h][_w][2])
                 cluster.update(_h, _w, self.data[_h][_w][0], self.data[_h][_w][1], self.data[_h][_w][2])
 
     def save_current_image(self, name):
@@ -156,10 +169,10 @@ class SLICProcessor(object):
         for i in trange(10):
             self.assignment()
             self.update_cluster()
-            name = 'result_M{m}_K{k}_loop{loop}.png'.format(loop=i, m=self.M, k=self.K)
+            name = 'lenna_M{m}_K{k}_loop{loop}.png'.format(loop=i, m=self.M, k=self.K)
             self.save_current_image(name)
 
-
 if __name__ == '__main__':
-    p = SLICProcessor('kid.jpg', 1000, 5)
+    #img = cv2.imread('99981_470030.jpg')
+    p = SLICProcessor('99981_470030.jpg', 1000, 5)
     p.iterate_10times()
